@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "MarketPulse",
+    "slug": "marketpulse-expo",
+    "icon": "./assets/images/icon.png",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "marketpulse",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.marketpulseexpo",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.example.marketpulseexpo"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-web-browser"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "65dcb71d-2c86-41e9-83a9-ff7446cf5774"
+      }
+    }
+  }
+}
