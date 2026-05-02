@@ -7,7 +7,7 @@ import { EmptyView, ErrorView, LoadingView } from '@/components/StateViews';
 import { FilterBar } from '@/components/FilterBar';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
 
 const articleService = makeDefaultArticleService();
 
@@ -19,11 +19,18 @@ export function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
 
   const filtered = useMemo(() => {
-    if (filter === 'All') return articles;
-    return articles.filter(article => article.source === filter);
-  }, [articles, filter]);
+    let result = articles;
+    if (filter !== 'All') {
+      result = result.filter(article => article.source === filter);
+    }
+    if (searchText) {
+      result = result.filter(article => article.title.toLowerCase().includes(searchText.toLowerCase()));
+    }
+    return result;
+  }, [articles, filter, searchText]);
 
   const favoriteIds = useMemo(() => new Set(favorites.map(article => article.id)), [favorites]);
 
@@ -70,6 +77,15 @@ export function FeedScreen() {
     <View style={[styles.container, { backgroundColor: dark ? '#000000' : '#F3F4F6' }]}>
       <Text style={[styles.title, { color: dark ? '#FFFFFF' : '#111827' }]}>MarketPulse</Text>
       <Text style={styles.subtitle}>Yahoo + Bloomberg headlines</Text>
+      <TextInput
+        style={[styles.searchInput, { color: dark ? '#FFFFFF' : '#111827', borderColor: dark ? '#333333' : '#CCCCCC' }]}
+        placeholder="Search articles..."
+        placeholderTextColor={dark ? '#888888' : '#666666'}
+        value={searchText}
+        onChangeText={setSearchText}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
       <FilterBar selected={filter} onSelect={setFilter} />
       {error ? <Text style={styles.inlineError}>Some sources failed: {error}</Text> : null}
       <FlatList
@@ -95,6 +111,15 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   title: { fontSize: 34, fontWeight: '800', paddingHorizontal: 16, paddingTop: 18 },
   subtitle: { color: '#8E8E93', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16 },
+  searchInput: {
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    fontSize: 16,
+  },
   list: { paddingBottom: 24 },
   emptyList: { flexGrow: 1 },
   inlineError: { color: '#FF453A', paddingHorizontal: 16, marginBottom: 8 }

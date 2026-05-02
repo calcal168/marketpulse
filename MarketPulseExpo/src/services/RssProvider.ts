@@ -6,6 +6,24 @@ import { stripHtml } from './html';
 
 const parser = new XMLParser({ ignoreAttributes: false });
 
+interface RssItem {
+  title?: string;
+  link?: string | { '#text': string };
+  guid?: string | { '#text': string };
+  description?: string;
+  pubDate?: string;
+}
+
+interface RssChannel {
+  item?: RssItem | RssItem[];
+}
+
+interface RssFeed {
+  rss?: {
+    channel?: RssChannel;
+  };
+}
+
 function asArray<T>(value: T | T[] | undefined): T[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
@@ -17,35 +35,36 @@ export class RssProvider implements ArticleProvider {
   async fetchArticles(): Promise<Article[]> {
     const response = await fetch(this.url);
 
-   
-
     if (!response.ok) {
       throw new Error(`${this.source} feed failed: ${response.status}`);
     }
 
     const xml = await response.text();
 
-    console.log('XML preview:', xml.slice(0, 300));
-    console.log('==============================');
+    let parsed: RssFeed;
+    try {
+      parsed = parser.parse(xml);
+    } catch (error) {
+      throw new Error(`Failed to parse RSS XML for ${this.source}: ${(error as Error).message}`);
+    }
 
-    const parsed = parser.parse(xml);
     const items = asArray(parsed?.rss?.channel?.item);
 
     return items
-      .map((item: any): Article | undefined => {
-        const rawLink =
-          typeof item.link === 'string'
-            ? item.link
-            : item.guid?.['#text'];
-
-        const link =
-          typeof rawLink === 'string' &&
-          rawLink.startsWith('http') &&
-          !rawLink.includes('localhost')
-            ? rawLink
+      .map((item): Article | undefined => {
+        const rawLink = item.link
+          ? typeof item.link === 'string' ? item.link : item.link['#text']
+          : item.guid
+            ? typeof item.guid === 'string' ? item.guid : item.guid['#text']
             : undefined;
 
-        const title = stripHtml(item.title);
+        const link = typeof rawLink === 'string' &&
+          rawLink.startsWith('http') &&
+          !rawLink.includes('localhost')
+          ? rawLink
+          : undefined;
+
+        const title = item.title ? stripHtml(item.title) : undefined;
 
         if (!link || !title) return undefined;
 
@@ -53,10 +72,8 @@ export class RssProvider implements ArticleProvider {
           id: `${this.source}-${link}`,
           source: this.source,
           title,
-          summary: stripHtml(item.description),
-          publishedAt: item.pubDate
-            ? new Date(item.pubDate).toISOString()
-            : undefined,
+          summary: item.description ? stripHtml(item.description) : undefined,
+          publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : undefined,
           url: link,
         };
       })
