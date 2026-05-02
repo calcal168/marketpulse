@@ -8,11 +8,13 @@ import { FilterBar } from '@/components/FilterBar';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const articleService = makeDefaultArticleService();
 
 export function FeedScreen() {
   const dark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const [articles, setArticles] = useState<Article[]>([]);
   const [favorites, setFavorites] = useState<Article[]>([]);
   const [filter, setFilter] = useState<ArticleFilter>('All');
@@ -75,17 +77,22 @@ export function FeedScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: dark ? '#000000' : '#F3F4F6' }]}>
-      <Text style={[styles.title, { color: dark ? '#FFFFFF' : '#111827' }]}>MarketPulse</Text>
-      <Text style={styles.subtitle}>Yahoo + Bloomberg headlines</Text>
-      <TextInput
-        style={[styles.searchInput, { color: dark ? '#FFFFFF' : '#111827', borderColor: dark ? '#333333' : '#CCCCCC' }]}
-        placeholder="Search articles..."
-        placeholderTextColor={dark ? '#888888' : '#666666'}
-        value={searchText}
-        onChangeText={setSearchText}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: dark ? '#FFFFFF' : '#111827', paddingTop: insets.top + 18 }]}>MarketPulse</Text>
+      </View>
+      <Text style={styles.subtitle}>Yahoo + Bloomberg + Al Jazeera headlines</Text>
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          style={[styles.searchInput, { color: dark ? '#FFFFFF' : '#111827', borderColor: dark ? '#333333' : '#CCCCCC' }]}
+          placeholder="Search articles..."
+          placeholderTextColor={dark ? '#888888' : '#666666'}
+          value={searchText}
+          onChangeText={setSearchText}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
       <FilterBar selected={filter} onSelect={setFilter} />
       {error ? <Text style={styles.inlineError}>Some sources failed: {error}</Text> : null}
       <FlatList
@@ -99,6 +106,7 @@ export function FeedScreen() {
             isFavorite={favoriteIds.has(item.id)}
             onOpen={() => openArticle(item)}
             onToggleFavorite={() => toggleFavorite(item)}
+            highlightText={searchText}
           />
         )}
         contentContainerStyle={filtered.length === 0 ? styles.emptyList : styles.list}
@@ -109,15 +117,28 @@ export function FeedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  title: { fontSize: 34, fontWeight: '800', paddingHorizontal: 16, paddingTop: 18 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, gap: 12 },
+  title: { fontSize: 34, fontWeight: '800', flex: 1, paddingTop: 18 },
+  langButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', minWidth: 70 },
+  langButtonText: { fontSize: 22 },
+  langButtonLabel: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
   subtitle: { color: '#8E8E93', paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16 },
-  searchInput: {
-    height: 40,
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
     marginHorizontal: 16,
     marginBottom: 8,
+    height: 40,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
     fontSize: 16,
   },
   list: { paddingBottom: 24 },

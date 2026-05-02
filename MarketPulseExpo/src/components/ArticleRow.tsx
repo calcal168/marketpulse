@@ -8,19 +8,42 @@ type Props = {
   isFavorite: boolean;
   onOpen: () => void;
   onToggleFavorite: () => void;
+  highlightText?: string;
 };
 
-export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite }: Props) {
+export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, highlightText }: Props) {
   const scheme = useColorScheme();
   const dark = scheme === 'dark';
+  const displayTitle = article.title;
+
+  const renderHighlightedTitle = () => {
+    if (!highlightText || !displayTitle.toLowerCase().includes(highlightText.toLowerCase())) {
+      return <Text style={[styles.title, { color: dark ? '#FFFFFF' : '#111827' }]}>{displayTitle}</Text>;
+    }
+
+    const regex = new RegExp(`(${highlightText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = displayTitle.split(regex);
+
+    return (
+      <Text style={[styles.title, { color: dark ? '#FFFFFF' : '#111827' }]}>
+        {parts.map((part, index) =>
+          regex.test(part) ? (
+            <Text key={index} style={{ backgroundColor: dark ? '#FFFF00' : '#FFFF00', color: '#000000' }}>{part}</Text>
+          ) : (
+            <Text key={index}>{part}</Text>
+          )
+        )}
+      </Text>
+    );
+  };
 
   return (
-    <Pressable onPress={onOpen} style={[styles.card, { backgroundColor: dark ? '#1C1C1E' : '#FFFFFF' }]}>
+    <Pressable onPress={onOpen} style={[styles.card, { backgroundColor: dark ? '#1C1C1E' : '#FFFFFF', borderColor: dark ? '#333333' : '#E5E7EB' }]}>
       <View style={styles.header}>
         <Text style={[styles.source, { color: tintColor }]}>{article.source}</Text>
         <Text style={[styles.time, { color: dark ? '#A1A1A6' : '#6B7280' }]}>{formatRelativeDate(article.publishedAt)}</Text>
       </View>
-      <Text style={[styles.title, { color: dark ? '#FFFFFF' : '#111827' }]}>{article.title}</Text>
+      {renderHighlightedTitle()}
       {article.summary ? (
         <Text numberOfLines={3} style={[styles.summary, { color: dark ? '#D1D1D6' : '#4B5563' }]}>{article.summary}</Text>
       ) : null}
@@ -36,15 +59,16 @@ export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite }: Pr
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
+    borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
     marginVertical: 8,
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    borderWidth: 1
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   source: { fontSize: 13, fontWeight: '700' },

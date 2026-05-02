@@ -2,7 +2,7 @@ import { ArticleFilter } from '@/models/NewsSource';
 import { Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { tintColor } from '@/theme/colors';
 
-const filters: ArticleFilter[] = ['All', 'Yahoo', 'Bloomberg'];
+const filters: ArticleFilter[] = ['All', 'Yahoo', 'Bloomberg', 'AlJazeera'];
 
 type Props = {
   selected: ArticleFilter;
