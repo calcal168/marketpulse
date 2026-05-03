@@ -15,10 +15,14 @@
       "bundleIdentifier": "com.example.marketpulseexpo",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "android": {
-      "package": "com.example.marketpulseexpo"
+      "package": "com.example.marketpulseexpo",
+      "runtimeVersion": "1.0.0"
     },
     "plugins": [
       "expo-router",
@@ -30,6 +34,9 @@
       "eas": {
         "projectId": "65dcb71d-2c86-41e9-83a9-ff7446cf5774"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/65dcb71d-2c86-41e9-83a9-ff7446cf5774"
     }
   }
 }
