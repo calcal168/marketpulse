@@ -33,9 +33,15 @@ export function FavoritesScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: dark ? '#000000' : '#F3F4F6' }]}>
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: dark ? '#FFFFFF' : '#111827', paddingTop: insets.top + 18 }]}>Favorites</Text>
+    <View style={[styles.container, { backgroundColor: dark ? '#0B0D12' : '#F5F7FA' }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 16, borderBottomColor: dark ? '#20252E' : '#E3E7ED' }]}>
+        <View>
+          <Text style={[styles.kicker, { color: dark ? '#8F98A8' : '#667085' }]}>Reading list</Text>
+          <Text style={[styles.title, { color: dark ? '#F5F7FA' : '#111827' }]}>Favorites</Text>
+        </View>
+        <Text style={[styles.subtitle, { color: dark ? '#AAB3C2' : '#4B5563' }]}>
+          {favorites.length === 1 ? '1 saved article' : `${favorites.length} saved articles`}
+        </Text>
       </View>
       <FlatList
         data={favorites}
@@ -57,11 +63,10 @@ export function FavoritesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, gap: 12 },
-  title: { fontSize: 34, fontWeight: '800', flex: 1, paddingTop: 18 },
-  langButton: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginTop: 18, flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', minWidth: 70 },
-  langButtonText: { fontSize: 22 },
-  langButtonLabel: { color: '#FFFFFF', fontWeight: '800', fontSize: 13 },
-  list: { paddingBottom: 24 },
+  header: { paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1 },
+  kicker: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0 },
+  title: { fontSize: 30, fontWeight: '800', marginTop: 2 },
+  subtitle: { fontSize: 14, lineHeight: 20, marginTop: 10, fontWeight: '700' },
+  list: { paddingTop: 8, paddingBottom: 24 },
   emptyList: { flexGrow: 1 }
 });

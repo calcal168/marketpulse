@@ -5,8 +5,9 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "ios": "expo start --ios",
-    "android": "expo start --android",
+    "brief-server": "node server/marketBriefServer.mjs",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
     "web": "expo start --web",
     "test": "jest"
   },
@@ -14,6 +15,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~54.0.0",
     "expo-linking": "~8.0.12",
+    "expo-notifications": "~0.32.17",
     "expo-router": "~6.0.23",
     "expo-web-browser": "~15.0.11",
     "fast-xml-parser": "^5.7.2",

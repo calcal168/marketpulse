@@ -12,23 +12,25 @@ type Props = {
 };
 
 export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, highlightText }: Props) {
-  const scheme = useColorScheme();
-  const dark = scheme === 'dark';
+  const dark = useColorScheme() === 'dark';
   const displayTitle = article.title;
+  const displaySummary = article.summary;
+  const host = getHost(article.url);
 
   const renderHighlightedTitle = () => {
     if (!highlightText || !displayTitle.toLowerCase().includes(highlightText.toLowerCase())) {
-      return <Text style={[styles.title, { color: dark ? '#FFFFFF' : '#111827' }]}>{displayTitle}</Text>;
+      return <Text style={[styles.title, { color: dark ? '#F5F7FA' : '#111827' }]}>{displayTitle}</Text>;
     }
 
-    const regex = new RegExp(`(${highlightText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const escaped = highlightText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
     const parts = displayTitle.split(regex);
 
     return (
-      <Text style={[styles.title, { color: dark ? '#FFFFFF' : '#111827' }]}>
+      <Text style={[styles.title, { color: dark ? '#F5F7FA' : '#111827' }]}>
         {parts.map((part, index) =>
-          regex.test(part) ? (
-            <Text key={index} style={{ backgroundColor: dark ? '#FFFF00' : '#FFFF00', color: '#000000' }}>{part}</Text>
+          part.toLowerCase() === highlightText.toLowerCase() ? (
+            <Text key={index} style={{ backgroundColor: dark ? '#FACC15' : '#FEF08A', color: '#111827' }}>{part}</Text>
           ) : (
             <Text key={index}>{part}</Text>
           )
@@ -38,44 +40,71 @@ export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, high
   };
 
   return (
-    <Pressable onPress={onOpen} style={[styles.card, { backgroundColor: dark ? '#1C1C1E' : '#FFFFFF', borderColor: dark ? '#333333' : '#E5E7EB' }]}>
-      <View style={styles.header}>
-        <Text style={[styles.source, { color: tintColor }]}>{article.source}</Text>
-        <Text style={[styles.time, { color: dark ? '#A1A1A6' : '#6B7280' }]}>{formatRelativeDate(article.publishedAt)}</Text>
-      </View>
-      {renderHighlightedTitle()}
-      {article.summary ? (
-        <Text numberOfLines={3} style={[styles.summary, { color: dark ? '#D1D1D6' : '#4B5563' }]}>{article.summary}</Text>
-      ) : null}
-      <View style={styles.footer}>
-        <Text numberOfLines={1} style={[styles.link, { color: dark ? '#A1A1A6' : '#6B7280' }]}>{article.url}</Text>
-        <Pressable onPress={onToggleFavorite} hitSlop={12}>
-          <Text style={styles.star}>{isFavorite ? '★' : '☆'}</Text>
+    <View style={[styles.card, { backgroundColor: dark ? '#16181D' : '#FFFFFF', borderColor: dark ? '#2A2F38' : '#E6E8EC' }]}>
+      <Pressable onPress={onOpen}>
+        <View style={styles.header}>
+          <View style={[styles.sourceBadge, { backgroundColor: dark ? '#1E293B' : '#EEF6FF' }]}>
+            <Text style={[styles.source, { color: dark ? '#93C5FD' : tintColor }]} numberOfLines={1}>{article.source}</Text>
+          </View>
+          <Text style={[styles.time, { color: dark ? '#8F98A8' : '#6B7280' }]}>{formatRelativeDate(article.publishedAt)}</Text>
+        </View>
+
+        {renderHighlightedTitle()}
+
+        {displaySummary ? (
+          <Text numberOfLines={2} style={[styles.summary, { color: dark ? '#B8C0CC' : '#4B5563' }]}>{displaySummary}</Text>
+        ) : null}
+
+        <Text numberOfLines={1} style={[styles.link, { color: dark ? '#8F98A8' : '#6B7280' }]}>{host}</Text>
+      </Pressable>
+
+      <View style={styles.actions}>
+        <Pressable
+          onPress={onToggleFavorite}
+          hitSlop={8}
+          style={[styles.actionButton, {
+            backgroundColor: isFavorite ? tintColor : 'transparent',
+            borderColor: isFavorite ? tintColor : dark ? '#394150' : '#D4D8E0'
+          }]}
+        >
+          <Text style={[styles.actionText, { color: isFavorite ? '#FFFFFF' : dark ? '#DDE3ED' : '#374151' }]}>
+            {isFavorite ? '已存' : '收藏'}
+          </Text>
         </Pressable>
       </View>
-    </Pressable>
+    </View>
   );
+}
+
+function getHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    padding: 14,
     marginHorizontal: 16,
-    marginVertical: 8,
+    marginVertical: 6,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
     borderWidth: 1
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  source: { fontSize: 13, fontWeight: '700' },
-  time: { fontSize: 13 },
-  title: { fontSize: 18, fontWeight: '700', lineHeight: 24 },
-  summary: { marginTop: 8, fontSize: 14, lineHeight: 20 },
-  footer: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
-  link: { flex: 1, fontSize: 12 },
-  star: { fontSize: 28, color: tintColor }
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 9 },
+  sourceBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, maxWidth: '62%' },
+  source: { fontSize: 12, fontWeight: '800' },
+  time: { fontSize: 12, fontWeight: '600' },
+  title: { fontSize: 16, fontWeight: '700', lineHeight: 22 },
+  summary: { marginTop: 7, fontSize: 13, lineHeight: 19 },
+  link: { marginTop: 12, fontSize: 12, fontWeight: '600' },
+  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
+  actionButton: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 7, minWidth: 54, alignItems: 'center' },
+  actionText: { fontSize: 12, fontWeight: '800' }
 });
