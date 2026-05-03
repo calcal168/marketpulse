@@ -18,7 +18,7 @@ import { EmptyView, ErrorView, LoadingView } from '@/components/StateViews';
 import { FilterBar } from '@/components/FilterBar';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Switch, Text, TextInput, View, useColorScheme } from 'react-native';
+import { FlatList, Image, RefreshControl, StyleSheet, Switch, Text, TextInput, View, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const articleService = makeDefaultArticleService();
@@ -135,9 +135,13 @@ export function FeedScreen() {
     <View style={[styles.container, { backgroundColor: dark ? '#0B0D12' : '#F5F7FA' }]}>
       <View style={[styles.header, { paddingTop: insets.top + 16, borderBottomColor: dark ? '#20252E' : '#E3E7ED' }]}>
         <View style={styles.titleRow}>
-          <View>
-            <Text style={[styles.kicker, { color: dark ? '#8F98A8' : '#667085' }]}>Market intelligence</Text>
-            <Text style={[styles.title, { color: dark ? '#F5F7FA' : '#111827' }]}>MarketPulse</Text>
+          <View style={styles.brandRow}>
+            <View style={[styles.logoShell, { backgroundColor: dark ? '#111827' : '#FFFFFF', borderColor: dark ? '#2A2F38' : '#DDE3EA' }]}>
+              <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
+            </View>
+            <View>
+              <Text style={[styles.title, { color: dark ? '#F5F7FA' : '#111827' }]}>MarketPulse</Text>
+            </View>
           </View>
           <View style={[styles.countBadge, { backgroundColor: dark ? '#171B22' : '#FFFFFF', borderColor: dark ? '#2A2F38' : '#E1E5EA' }]}>
             <Text style={[styles.countValue, { color: dark ? '#F5F7FA' : '#111827' }]}>{filtered.length}</Text>
@@ -228,8 +232,10 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1 },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 },
-  kicker: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0 },
-  title: { fontSize: 30, fontWeight: '800', marginTop: 2 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
+  logoShell: { width: 42, height: 42, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  logo: { width: 34, height: 34, borderRadius: 7 },
+  title: { fontSize: 30, fontWeight: '800' },
   countBadge: { borderWidth: 1, borderRadius: 8, minWidth: 72, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
   countValue: { fontSize: 18, fontWeight: '800' },
   countLabel: { fontSize: 11, fontWeight: '700', marginTop: 1 },

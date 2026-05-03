@@ -1,6 +1,6 @@
 import { Article } from '@/models/Article';
 import { formatRelativeDate } from '@/services/date';
-import { Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { tintColor } from '@/theme/colors';
 
 type Props = {
@@ -16,6 +16,14 @@ export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, high
   const displayTitle = article.title;
   const displaySummary = article.summary;
   const host = getHost(article.url);
+
+  async function shareArticle() {
+    await Share.share({
+      title: article.title,
+      message: `${article.title}\n\n${article.url}`,
+      url: article.url,
+    });
+  }
 
   const renderHighlightedTitle = () => {
     if (!highlightText || !displayTitle.toLowerCase().includes(highlightText.toLowerCase())) {
@@ -60,6 +68,13 @@ export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, high
 
       <View style={styles.actions}>
         <Pressable
+          onPress={shareArticle}
+          hitSlop={8}
+          style={[styles.actionButton, { borderColor: dark ? '#394150' : '#D4D8E0' }]}
+        >
+          <Text style={[styles.actionText, { color: dark ? '#DDE3ED' : '#374151' }]}>Share</Text>
+        </Pressable>
+        <Pressable
           onPress={onToggleFavorite}
           hitSlop={8}
           style={[styles.actionButton, {
@@ -68,7 +83,7 @@ export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, high
           }]}
         >
           <Text style={[styles.actionText, { color: isFavorite ? '#FFFFFF' : dark ? '#DDE3ED' : '#374151' }]}>
-            {isFavorite ? '已存' : '收藏'}
+            {isFavorite ? 'Saved' : 'Save'}
           </Text>
         </Pressable>
       </View>
@@ -105,6 +120,6 @@ const styles = StyleSheet.create({
   summary: { marginTop: 7, fontSize: 13, lineHeight: 19 },
   link: { marginTop: 12, fontSize: 12, fontWeight: '600' },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
-  actionButton: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 7, minWidth: 54, alignItems: 'center' },
+  actionButton: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 7, minWidth: 58, alignItems: 'center' },
   actionText: { fontSize: 12, fontWeight: '800' }
 });

@@ -13,16 +13,23 @@ export function MarketBriefPanel({ brief, loading, error, onGenerate }: Props) {
   const dark = useColorScheme() === 'dark';
 
   return (
-    <View style={[styles.panel, { backgroundColor: dark ? '#171B22' : '#FFFFFF', borderColor: dark ? '#2A2F38' : '#DDE3EA' }]}>
-      <View style={styles.header}>
-        <View style={styles.titleGroup}>
-          <Text style={[styles.title, { color: dark ? '#F5F7FA' : '#111827' }]}>AI Market Brief</Text>
-          <Text style={[styles.subtitle, { color: dark ? '#8F98A8' : '#667085' }]}>
-            {brief ? `${brief.mode === 'ai' ? 'AI' : 'Local'} summary` : 'Summarize hottest stories'}
-          </Text>
+    <View style={[styles.panel, { backgroundColor: dark ? '#151922' : '#FFFFFF', borderColor: dark ? '#2A2F38' : '#DDE3EA' }]}>
+      <View style={styles.topBar}>
+        <View style={styles.headingBlock}>
+          <View style={styles.titleLine}>
+          <Text style={[styles.eyebrow, { color: dark ? '#8F98A8' : '#667085' }]}>AI News that Affects the Stock Market</Text>
+            {brief ? (
+              <View style={[styles.modeChip, { backgroundColor: brief.mode === 'ai' ? '#EAF4FF' : dark ? '#262B35' : '#F2F4F7' }]}>
+                <Text style={[styles.modeText, { color: brief.mode === 'ai' ? tintColor : dark ? '#C8D0DD' : '#667085' }]}>
+                  {brief.mode === 'ai' ? 'AI' : 'Local'}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={[styles.title, { color: dark ? '#F5F7FA' : '#111827' }]}>Market Impact Summary</Text>
         </View>
         <Pressable onPress={onGenerate} disabled={loading} style={[styles.button, { opacity: loading ? 0.65 : 1 }]}>
-          <Text style={styles.buttonText}>{loading ? 'Thinking...' : brief ? 'Refresh' : 'Generate'}</Text>
+          <Text style={styles.buttonText}>{loading ? 'Generating' : brief ? 'Refresh' : 'Generate'}</Text>
         </Pressable>
       </View>
 
@@ -32,44 +39,70 @@ export function MarketBriefPanel({ brief, loading, error, onGenerate }: Props) {
         <View style={styles.body}>
           <Text style={[styles.headline, { color: dark ? '#F5F7FA' : '#111827' }]}>{brief.headline}</Text>
           <Text style={[styles.summary, { color: dark ? '#B8C0CC' : '#4B5563' }]}>{brief.summary}</Text>
-          <InfoRow label="Themes" values={brief.themes} dark={dark} />
-          <InfoRow label="Watch" values={brief.watchlist} dark={dark} />
-          {brief.whyItMatters.slice(0, 2).map((item, index) => (
-            <Text key={index} style={[styles.bullet, { color: dark ? '#DDE3ED' : '#374151' }]}>- {item}</Text>
-          ))}
+
+          <ChipSection label="Key market themes" values={brief.themes} dark={dark} />
+          <ChipSection label="Assets and names to watch" values={brief.watchlist} dark={dark} />
+
+          {brief.whyItMatters.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={[styles.sectionLabel, { color: dark ? '#8F98A8' : '#667085' }]}>Why it matters</Text>
+              {brief.whyItMatters.slice(0, 3).map((item, index) => (
+                <View key={index} style={styles.reasonRow}>
+                  <Text style={[styles.reasonDot, { color: tintColor }]}>•</Text>
+                  <Text style={[styles.reasonText, { color: dark ? '#DDE3ED' : '#374151' }]}>{item}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
-      ) : null}
+      ) : (
+        <Text style={[styles.emptyText, { color: dark ? '#8F98A8' : '#667085' }]}>
+          Generate a market-impact brief from the latest loaded headlines.
+        </Text>
+      )}
     </View>
   );
 }
 
-function InfoRow({ label, values, dark }: { label: string; values: string[]; dark: boolean }) {
+function ChipSection({ label, values, dark }: { label: string; values: string[]; dark: boolean }) {
   if (values.length === 0) return null;
 
   return (
-    <View style={styles.infoRow}>
-      <Text style={[styles.infoLabel, { color: dark ? '#8F98A8' : '#667085' }]}>{label}</Text>
-      <Text style={[styles.infoText, { color: dark ? '#DDE3ED' : '#374151' }]} numberOfLines={2}>
-        {values.join(', ')}
-      </Text>
+    <View style={styles.section}>
+      <Text style={[styles.sectionLabel, { color: dark ? '#8F98A8' : '#667085' }]}>{label}</Text>
+      <View style={styles.chipWrap}>
+        {values.slice(0, 8).map(value => (
+          <View key={value} style={[styles.chip, { backgroundColor: dark ? '#202631' : '#F2F6FB', borderColor: dark ? '#303847' : '#E1E7EF' }]}>
+            <Text style={[styles.chipText, { color: dark ? '#DDE3ED' : '#344054' }]} numberOfLines={1}>{value}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  panel: { borderWidth: 1, borderRadius: 8, padding: 12, marginHorizontal: 16, marginTop: 14, marginBottom: 8 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
-  titleGroup: { flex: 1 },
-  title: { fontSize: 14, fontWeight: '800' },
-  subtitle: { fontSize: 11, fontWeight: '600', marginTop: 1 },
+  panel: { borderWidth: 1, borderRadius: 8, padding: 14, marginHorizontal: 16, marginTop: 14, marginBottom: 8 },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'center' },
+  headingBlock: { flex: 1 },
+  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  eyebrow: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0 },
+  title: { fontSize: 18, fontWeight: '800', marginTop: 2 },
+  modeChip: { borderRadius: 5, paddingHorizontal: 7, paddingVertical: 3 },
+  modeText: { fontSize: 10, fontWeight: '800' },
   button: { backgroundColor: tintColor, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8, minWidth: 82, alignItems: 'center' },
   buttonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
-  body: { marginTop: 10, gap: 7 },
-  headline: { fontSize: 15, fontWeight: '800', lineHeight: 20 },
-  summary: { fontSize: 13, lineHeight: 18 },
-  infoRow: { flexDirection: 'row', gap: 8 },
-  infoLabel: { width: 48, fontSize: 12, fontWeight: '800' },
-  infoText: { flex: 1, fontSize: 12, fontWeight: '700', lineHeight: 17 },
-  bullet: { fontSize: 12, lineHeight: 17 },
+  body: { marginTop: 12 },
+  headline: { fontSize: 16, fontWeight: '800', lineHeight: 22 },
+  summary: { fontSize: 13, lineHeight: 19, marginTop: 7 },
+  section: { marginTop: 12 },
+  sectionLabel: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0, marginBottom: 7 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chip: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5, maxWidth: '100%' },
+  chipText: { fontSize: 12, fontWeight: '700' },
+  reasonRow: { flexDirection: 'row', gap: 7, alignItems: 'flex-start', marginTop: 6 },
+  reasonDot: { fontSize: 14, lineHeight: 18, fontWeight: '800' },
+  reasonText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  emptyText: { fontSize: 13, lineHeight: 18, marginTop: 10 },
   error: { color: '#D92D20', fontSize: 12, fontWeight: '700', marginTop: 8 }
 });
