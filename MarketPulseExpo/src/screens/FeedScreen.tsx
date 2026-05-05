@@ -16,9 +16,11 @@ import { ArticleRow } from '@/components/ArticleRow';
 import { MarketBriefPanel } from '@/components/MarketBriefPanel';
 import { EmptyView, ErrorView, LoadingView } from '@/components/StateViews';
 import { FilterBar } from '@/components/FilterBar';
-import * as WebBrowser from 'expo-web-browser';
+import { tintColor } from '@/theme/colors';
+import * as Speech from 'expo-speech';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Image, RefreshControl, StyleSheet, Switch, Text, TextInput, View, useColorScheme } from 'react-native';
+import { FlatList, Image, Pressable, RefreshControl, StyleSheet, Switch, Text, TextInput, View, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const articleService = makeDefaultArticleService();
@@ -42,6 +44,7 @@ export function FeedScreen() {
   const [marketBrief, setMarketBrief] = useState<MarketBrief | undefined>();
   const [briefLoading, setBriefLoading] = useState(false);
   const [briefError, setBriefError] = useState<string | undefined>();
+  const [readingFeed, setReadingFeed] = useState(false);
 
   const filtered = useMemo(() => {
     let result = articles;
@@ -83,6 +86,13 @@ export function FeedScreen() {
     refresh(false);
   }, [refresh]);
 
+  useEffect(() => {
+    if (readingFeed) {
+      Speech.stop();
+      setReadingFeed(false);
+    }
+  }, [filter, searchText]);
+
   async function toggleAlerts(enabled: boolean) {
     const permitted = enabled ? await ensureNotificationPermission() : true;
     const next = { ...alertSettings, enabled: enabled && permitted };
@@ -114,6 +124,28 @@ export function FeedScreen() {
     }
   }
 
+  async function toggleReadFeed() {
+    if (readingFeed) {
+      await Speech.stop();
+      setReadingFeed(false);
+      return;
+    }
+
+    const headlines = filtered;
+    if (headlines.length === 0) return;
+
+    await Speech.stop();
+    setReadingFeed(true);
+    Speech.speak(createFeedSpeechText(headlines, filter), {
+      language: getFeedSpeechLanguage(headlines),
+      pitch: 1,
+      rate: 0.72,
+      onDone: () => setReadingFeed(false),
+      onStopped: () => setReadingFeed(false),
+      onError: () => setReadingFeed(false),
+    });
+  }
+
   async function toggleFavorite(article: Article) {
     const next = favoriteIds.has(article.id)
       ? favorites.filter(item => item.id !== article.id)
@@ -122,9 +154,14 @@ export function FeedScreen() {
     await saveFavorites(next);
   }
 
-  async function openArticle(article: Article) {
-    await WebBrowser.openBrowserAsync(article.url, {
-      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET
+  function openArticle(article: Article) {
+    router.push({
+      pathname: '/article',
+      params: {
+        title: article.title,
+        url: article.url,
+        source: article.source,
+      },
     });
   }
 
@@ -143,10 +180,25 @@ export function FeedScreen() {
               <Text style={[styles.title, { color: dark ? '#F5F7FA' : '#111827' }]}>MarketPulse</Text>
             </View>
           </View>
-          <View style={[styles.countBadge, { backgroundColor: dark ? '#171B22' : '#FFFFFF', borderColor: dark ? '#2A2F38' : '#E1E5EA' }]}>
-            <Text style={[styles.countValue, { color: dark ? '#F5F7FA' : '#111827' }]}>{filtered.length}</Text>
-            <Text style={[styles.countLabel, { color: dark ? '#8F98A8' : '#667085' }]}>shown</Text>
-          </View>
+          <Pressable
+            onPress={toggleReadFeed}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${readingFeed ? 'Stop reading' : 'Read'} ${filtered.length} shown headlines`}
+            style={[styles.readButton, {
+              backgroundColor: readingFeed ? tintColor : dark ? '#171B22' : '#FFFFFF',
+              borderColor: readingFeed ? tintColor : dark ? '#2A2F38' : '#E1E5EA'
+            }]}
+          >
+            <View style={styles.readButtonContent}>
+              <Text style={[styles.readButtonText, { color: readingFeed ? '#FFFFFF' : dark ? '#DDE3ED' : '#374151' }]}>
+                {readingFeed ? 'Stop' : 'Read'}
+              </Text>
+              <Text style={[styles.readButtonCount, { color: readingFeed ? '#EAF4FF' : dark ? '#8F98A8' : '#667085' }]}>
+                {filtered.length} shown
+              </Text>
+            </View>
+          </Pressable>
         </View>
 
         <View style={[styles.searchContainer, { backgroundColor: dark ? '#171B22' : '#FFFFFF', borderColor: dark ? '#2A2F38' : '#DDE3EA' }]}>
@@ -236,6 +288,10 @@ const styles = StyleSheet.create({
   logoShell: { width: 42, height: 42, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   logo: { width: 34, height: 34, borderRadius: 7 },
   title: { fontSize: 30, fontWeight: '800' },
+  readButton: { borderWidth: 1, borderRadius: 8, minWidth: 86, paddingHorizontal: 12, paddingVertical: 7, alignItems: 'center' },
+  readButtonContent: { alignItems: 'center' },
+  readButtonText: { fontSize: 14, fontWeight: '800' },
+  readButtonCount: { fontSize: 11, fontWeight: '700', marginTop: 1 },
   countBadge: { borderWidth: 1, borderRadius: 8, minWidth: 72, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
   countValue: { fontSize: 18, fontWeight: '800' },
   countLabel: { fontSize: 11, fontWeight: '700', marginTop: 1 },
@@ -254,3 +310,14 @@ const styles = StyleSheet.create({
   emptyList: { flexGrow: 1 },
   inlineError: { color: '#D92D20', paddingHorizontal: 16, marginBottom: 8, fontSize: 13, fontWeight: '700' }
 });
+
+function createFeedSpeechText(articles: Article[], filter: ArticleFilter): string {
+  const sourceIntro = filter === 'All' ? 'all news feeds' : `${filter} news`;
+  const headlines = articles.map((article, index) => `${index + 1}. ${article.title}`).join('. ');
+  return `MarketPulse headlines from ${sourceIntro}. ${headlines}`;
+}
+
+function getFeedSpeechLanguage(articles: Article[]): string {
+  const chineseCount = articles.filter(article => /[\u3400-\u9FFF]/.test(article.title)).length;
+  return chineseCount > articles.length / 2 ? 'zh-CN' : 'en-US';
+}

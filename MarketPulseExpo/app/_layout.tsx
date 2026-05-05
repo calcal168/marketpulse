@@ -15,6 +15,7 @@ export default function RootLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Feed' }} />
       <Tabs.Screen name="favorites" options={{ title: 'Favorites' }} />
+      <Tabs.Screen name="article" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -2,8 +2,7 @@ import { Article } from '@/models/Article';
 import { loadFavorites, saveFavorites } from '@/store/favorites';
 import { ArticleRow } from '@/components/ArticleRow';
 import { EmptyView } from '@/components/StateViews';
-import * as WebBrowser from 'expo-web-browser';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,9 +25,14 @@ export function FavoritesScreen() {
     await saveFavorites(next);
   }
 
-  async function openArticle(article: Article) {
-    await WebBrowser.openBrowserAsync(article.url, {
-      presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET
+  function openArticle(article: Article) {
+    router.push({
+      pathname: '/article',
+      params: {
+        title: article.title,
+        url: article.url,
+        source: article.source,
+      },
     });
   }
 
