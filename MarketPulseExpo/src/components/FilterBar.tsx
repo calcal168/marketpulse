@@ -1,16 +1,20 @@
 import { ArticleFilter } from '@/models/NewsSource';
+import { NewsCategoryFilter } from '@/models/NewsCategory';
 import { Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { tintColor } from '@/theme/colors';
 
-const filters: ArticleFilter[] = ['All', 'Yahoo', 'BBC', 'BBC中文', 'CNA', '新浪', 'AlJazeera'];
+const sourceFilters: ArticleFilter[] = ['All', 'Yahoo', 'BBC', 'BBC中文', 'CNA', '新浪', 'AlJazeera', 'Google News'];
+const categoryFilters: NewsCategoryFilter[] = ['All', 'Political', 'Financial', 'Economic', 'People', 'Health', 'Tech'];
 
-type Props = {
-  selected: ArticleFilter;
-  onSelect: (filter: ArticleFilter) => void;
+type Props<T extends string> = {
+  selected: T;
+  onSelect: (filter: T) => void;
+  variant?: 'source' | 'category';
 };
 
-export function FilterBar({ selected, onSelect }: Props) {
+export function FilterBar<T extends ArticleFilter | NewsCategoryFilter>({ selected, onSelect, variant = 'source' }: Props<T>) {
   const dark = useColorScheme() === 'dark';
+  const filters = (variant === 'category' ? categoryFilters : sourceFilters) as T[];
 
   return (
     <View style={[styles.wrapper, {
@@ -44,9 +48,9 @@ export function FilterBar({ selected, onSelect }: Props) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { height: 64, justifyContent: 'center', borderBottomWidth: 1, marginBottom: 8 },
+  wrapper: { height: 56, justifyContent: 'center', borderBottomWidth: 1 },
   scroller: { flexGrow: 0 },
-  container: { gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, alignItems: 'center' },
+  container: { gap: 8, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, alignItems: 'center' },
   pill: { borderRadius: 6, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8, minHeight: 34, justifyContent: 'center' },
   label: { fontWeight: '800', fontSize: 12 }
 });

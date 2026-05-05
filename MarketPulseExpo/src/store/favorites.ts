@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Article } from '@/models/Article';
+import { categorizeArticle } from '@/services/categorizeArticle';
 
 const KEY = 'marketpulse.favorites.v1';
 
@@ -7,7 +8,10 @@ export async function loadFavorites(): Promise<Article[]> {
   const raw = await AsyncStorage.getItem(KEY);
   if (!raw) return [];
   try {
-    return JSON.parse(raw) as Article[];
+    return (JSON.parse(raw) as Article[]).map(article => ({
+      ...article,
+      category: article.category ?? categorizeArticle(article),
+    }));
   } catch {
     return [];
   }

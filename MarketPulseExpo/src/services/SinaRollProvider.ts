@@ -1,5 +1,6 @@
 import { Article } from '@/models/Article';
 import { ArticleProvider } from './ArticleProvider';
+import { categorizeArticle } from './categorizeArticle';
 import { cleanNewsText } from './html';
 
 interface SinaRollItem {
@@ -48,14 +49,19 @@ export class SinaRollProvider implements ArticleProvider {
         if (!link || !title) return undefined;
 
         const timestamp = Number(item.ctime ?? item.mtime);
-
-        return {
+        const article = {
           id: `新浪-${item.docid ?? link}`,
-          source: '新浪',
+          source: '新浪' as const,
+          category: 'Financial' as const,
           title,
           summary: cleanNewsText(item.intro) || cleanNewsText(item.summary),
           publishedAt: Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp * 1000).toISOString() : undefined,
           url: link,
+        };
+
+        return {
+          ...article,
+          category: categorizeArticle(article),
         };
       })
       .filter(Boolean) as Article[];

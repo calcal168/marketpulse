@@ -1,5 +1,7 @@
 import { Article } from '@/models/Article';
 import { formatRelativeDate } from '@/services/date';
+import { translateTextToChinese } from '@/services/translate';
+import { useEffect, useState } from 'react';
 import { Pressable, Share, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { tintColor } from '@/theme/colors';
 
@@ -13,9 +15,20 @@ type Props = {
 
 export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, highlightText }: Props) {
   const dark = useColorScheme() === 'dark';
-  const displayTitle = article.title;
-  const displaySummary = article.summary;
+  const [translatedTitle, setTranslatedTitle] = useState<string>();
+  const [translatedSummary, setTranslatedSummary] = useState<string>();
+  const [translating, setTranslating] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const displayTitle = showTranslation ? translatedTitle ?? article.title : article.title;
+  const displaySummary = showTranslation ? translatedSummary ?? article.summary : article.summary;
   const host = getHost(article.url);
+
+  useEffect(() => {
+    setTranslatedTitle(undefined);
+    setTranslatedSummary(undefined);
+    setTranslating(false);
+    setShowTranslation(false);
+  }, [article.id]);
 
   async function shareArticle() {
     await Share.share({
@@ -23,6 +36,31 @@ export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, high
       message: `${article.title}\n\n${article.url}`,
       url: article.url,
     });
+  }
+
+  async function toggleTranslation() {
+    if (showTranslation) {
+      setShowTranslation(false);
+      return;
+    }
+
+    if (translatedTitle || translating) {
+      setShowTranslation(true);
+      return;
+    }
+
+    try {
+      setTranslating(true);
+      const [nextTitle, nextSummary] = await Promise.all([
+        translateTextToChinese(article.title),
+        article.summary ? translateTextToChinese(article.summary) : Promise.resolve(undefined),
+      ]);
+      setTranslatedTitle(nextTitle);
+      setTranslatedSummary(nextSummary);
+      setShowTranslation(true);
+    } finally {
+      setTranslating(false);
+    }
   }
 
   const renderHighlightedTitle = () => {
@@ -51,8 +89,13 @@ export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, high
     <View style={[styles.card, { backgroundColor: dark ? '#16181D' : '#FFFFFF', borderColor: dark ? '#2A2F38' : '#E6E8EC' }]}>
       <Pressable onPress={onOpen}>
         <View style={styles.header}>
-          <View style={[styles.sourceBadge, { backgroundColor: dark ? '#1E293B' : '#EEF6FF' }]}>
-            <Text style={[styles.source, { color: dark ? '#93C5FD' : tintColor }]} numberOfLines={1}>{article.source}</Text>
+          <View style={styles.badgeRow}>
+            <View style={[styles.sourceBadge, { backgroundColor: dark ? '#1E293B' : '#EEF6FF' }]}>
+              <Text style={[styles.source, { color: dark ? '#93C5FD' : tintColor }]} numberOfLines={1}>{article.source}</Text>
+            </View>
+            <View style={[styles.categoryBadge, { backgroundColor: dark ? '#222018' : '#FFF7E6' }]}>
+              <Text style={[styles.category, { color: dark ? '#FACC15' : '#92400E' }]} numberOfLines={1}>{article.category}</Text>
+            </View>
           </View>
           <Text style={[styles.time, { color: dark ? '#8F98A8' : '#6B7280' }]}>{formatRelativeDate(article.publishedAt)}</Text>
         </View>
@@ -67,6 +110,20 @@ export function ArticleRow({ article, isFavorite, onOpen, onToggleFavorite, high
       </Pressable>
 
       <View style={styles.actions}>
+        <Pressable
+          onPress={toggleTranslation}
+          disabled={translating}
+          hitSlop={8}
+          style={[styles.actionButton, {
+            opacity: translating ? 0.6 : 1,
+            backgroundColor: showTranslation ? tintColor : 'transparent',
+            borderColor: showTranslation ? tintColor : dark ? '#394150' : '#D4D8E0'
+          }]}
+        >
+          <Text style={[styles.actionText, { color: showTranslation ? '#FFFFFF' : dark ? '#DDE3ED' : '#374151' }]}>
+            {translating ? 'Translating' : showTranslation ? 'Original' : 'Translate'}
+          </Text>
+        </Pressable>
         <Pressable
           onPress={shareArticle}
           hitSlop={8}
@@ -113,13 +170,16 @@ const styles = StyleSheet.create({
     borderWidth: 1
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 9 },
-  sourceBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, maxWidth: '62%' },
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  sourceBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, maxWidth: '50%' },
+  categoryBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, maxWidth: '46%' },
   source: { fontSize: 12, fontWeight: '800' },
+  category: { fontSize: 12, fontWeight: '800' },
   time: { fontSize: 12, fontWeight: '600' },
   title: { fontSize: 16, fontWeight: '700', lineHeight: 22 },
   summary: { marginTop: 7, fontSize: 13, lineHeight: 19 },
   link: { marginTop: 12, fontSize: 12, fontWeight: '600' },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
   actionButton: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 7, minWidth: 58, alignItems: 'center' },
   actionText: { fontSize: 12, fontWeight: '800' }
 });

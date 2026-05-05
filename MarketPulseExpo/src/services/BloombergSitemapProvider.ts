@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { Article } from '@/models/Article';
 import { ArticleProvider } from './ArticleProvider';
+import { categorizeArticle } from './categorizeArticle';
 import { stripHtml } from './html';
 
 const parser = new XMLParser({ ignoreAttributes: false });
@@ -37,13 +38,19 @@ export class BloombergSitemapProvider implements ArticleProvider {
         const rawTitle = news?.['news:title'];
         const title = stripHtml(rawTitle) ?? cleanTitleFromUrl(loc);
 
-        return {
+        const article = {
           id: `Bloomberg-${loc}`,
-          source: 'Bloomberg',
+          source: 'Bloomberg' as const,
+          category: 'Financial' as const,
           title,
           summary: undefined,
           publishedAt: news?.['news:publication_date'] ? new Date(news['news:publication_date']).toISOString() : undefined,
           url: loc
+        };
+
+        return {
+          ...article,
+          category: categorizeArticle(article),
         };
       })
       .filter(Boolean) as Article[];

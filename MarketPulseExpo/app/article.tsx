@@ -1,8 +1,9 @@
 import { tintColor } from '@/theme/colors';
+import { translateTextToChinese } from '@/services/translate';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
 
@@ -55,6 +56,9 @@ export default function ArticleScreen() {
   const [articleText, setArticleText] = useState('');
   const [loading, setLoading] = useState(true);
   const [reading, setReading] = useState(false);
+  const [translatedText, setTranslatedText] = useState('');
+  const [translating, setTranslating] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
   const speakingRef = useRef(false);
 
   const url = typeof params.url === 'string' ? params.url : '';
@@ -64,7 +68,8 @@ export default function ArticleScreen() {
     () => createReadableArticleText(pageTitle || fallbackTitle, articleText),
     [articleText, fallbackTitle, pageTitle]
   );
-  const wordCount = readableText ? readableText.split(/\s+/).length : 0;
+  const speechText = showTranslation && translatedText ? translatedText : readableText;
+  const wordCount = speechText ? speechText.split(/\s+/).length : 0;
 
   useEffect(() => {
     return () => {
@@ -72,6 +77,18 @@ export default function ArticleScreen() {
       Speech.stop();
     };
   }, []);
+
+  useEffect(() => {
+    speakingRef.current = false;
+    Speech.stop();
+    setPageTitle(fallbackTitle);
+    setArticleText('');
+    setTranslatedText('');
+    setTranslating(false);
+    setShowTranslation(false);
+    setReading(false);
+    setLoading(true);
+  }, [fallbackTitle, url]);
 
   function handleMessage(event: WebViewMessageEvent) {
     try {
@@ -94,9 +111,9 @@ export default function ArticleScreen() {
       return;
     }
 
-    if (!readableText) return;
+    if (!speechText) return;
 
-    const chunks = chunkSpeechText(readableText);
+    const chunks = chunkSpeechText(speechText);
     let index = 0;
     speakingRef.current = true;
     await Speech.stop();
@@ -113,7 +130,7 @@ export default function ArticleScreen() {
 
       index += 1;
       Speech.speak(next, {
-        language: getSpeechLanguage(readableText),
+        language: getSpeechLanguage(speechText),
         pitch: 1,
         rate: 0.72,
         onDone: speakNext,
@@ -129,6 +146,27 @@ export default function ArticleScreen() {
     };
 
     speakNext();
+  }
+
+  async function toggleTranslation() {
+    if (showTranslation) {
+      setShowTranslation(false);
+      return;
+    }
+
+    if (translatedText || translating) {
+      setShowTranslation(true);
+      return;
+    }
+
+    try {
+      setTranslating(true);
+      const nextText = await translateTextToChinese(readableText);
+      setTranslatedText(nextText);
+      setShowTranslation(true);
+    } finally {
+      setTranslating(false);
+    }
   }
 
   if (!url) {
@@ -152,25 +190,43 @@ export default function ArticleScreen() {
           <Text numberOfLines={1} style={[styles.source, { color: dark ? '#8F98A8' : '#667085' }]}>{source}</Text>
           <Text numberOfLines={2} style={[styles.title, { color: dark ? '#F5F7FA' : '#111827' }]}>{pageTitle}</Text>
         </View>
-        <Pressable
-          onPress={toggleReadArticle}
-          disabled={!readableText}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel={`${reading ? 'Stop reading' : 'Read'} article`}
-          style={[styles.readButton, {
-            opacity: readableText ? 1 : 0.45,
-            backgroundColor: reading ? tintColor : dark ? '#171B22' : '#FFFFFF',
-            borderColor: reading ? tintColor : dark ? '#2A2F38' : '#E1E5EA'
-          }]}
-        >
-          <Text style={[styles.readButtonText, { color: reading ? '#FFFFFF' : dark ? '#DDE3ED' : '#374151' }]}>
-            {reading ? 'Stop' : 'Read'}
-          </Text>
-          <Text style={[styles.readButtonCount, { color: reading ? '#EAF4FF' : dark ? '#8F98A8' : '#667085' }]}>
-            {wordCount > 0 ? `${wordCount} words` : 'loading'}
-          </Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={toggleTranslation}
+            disabled={!readableText || translating}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${showTranslation ? 'Show original' : 'Translate'} article`}
+            style={[styles.smallButton, {
+              opacity: readableText && !translating ? 1 : 0.45,
+              backgroundColor: showTranslation ? tintColor : dark ? '#171B22' : '#FFFFFF',
+              borderColor: showTranslation ? tintColor : dark ? '#2A2F38' : '#E1E5EA'
+            }]}
+          >
+            <Text style={[styles.smallButtonText, { color: showTranslation ? '#FFFFFF' : dark ? '#DDE3ED' : '#374151' }]}>
+              {translating ? '...' : showTranslation ? 'Original' : 'Translate'}
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={toggleReadArticle}
+            disabled={!readableText}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${reading ? 'Stop reading' : 'Read'} article`}
+            style={[styles.readButton, {
+              opacity: readableText ? 1 : 0.45,
+              backgroundColor: reading ? tintColor : dark ? '#171B22' : '#FFFFFF',
+              borderColor: reading ? tintColor : dark ? '#2A2F38' : '#E1E5EA'
+            }]}
+          >
+            <Text style={[styles.readButtonText, { color: reading ? '#FFFFFF' : dark ? '#DDE3ED' : '#374151' }]}>
+              {reading ? 'Stop' : 'Read'}
+            </Text>
+            <Text style={[styles.readButtonCount, { color: reading ? '#EAF4FF' : dark ? '#8F98A8' : '#667085' }]}>
+              {wordCount > 0 ? `${wordCount} words` : 'loading'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
 
       {loading ? (
@@ -179,13 +235,19 @@ export default function ArticleScreen() {
         </View>
       ) : null}
 
-      <WebView
-        source={{ uri: url }}
-        injectedJavaScript={articleTextScript}
-        onMessage={handleMessage}
-        onLoadEnd={() => setLoading(false)}
-        style={styles.webView}
-      />
+      {showTranslation ? (
+        <ScrollView style={styles.translationView} contentContainerStyle={styles.translationContent}>
+          <Text style={[styles.translatedText, { color: dark ? '#F5F7FA' : '#111827' }]}>{translatedText}</Text>
+        </ScrollView>
+      ) : (
+        <WebView
+          source={{ uri: url }}
+          injectedJavaScript={articleTextScript}
+          onMessage={handleMessage}
+          onLoadEnd={() => setLoading(false)}
+          style={styles.webView}
+        />
+      )}
     </View>
   );
 }
@@ -248,11 +310,17 @@ const styles = StyleSheet.create({
   titleGroup: { flex: 1, minWidth: 0 },
   source: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0 },
   title: { fontSize: 15, fontWeight: '800', lineHeight: 20, marginTop: 2 },
+  headerActions: { alignItems: 'center', gap: 6 },
+  smallButton: { borderWidth: 1, borderRadius: 8, minWidth: 86, paddingHorizontal: 8, paddingVertical: 6, alignItems: 'center' },
+  smallButtonText: { fontSize: 12, fontWeight: '800' },
   readButton: { borderWidth: 1, borderRadius: 8, minWidth: 86, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center' },
   readButtonText: { fontSize: 14, fontWeight: '800' },
   readButtonCount: { fontSize: 10, fontWeight: '700', marginTop: 1 },
   loading: { position: 'absolute', top: 84, left: 0, right: 0, zIndex: 2, paddingVertical: 12 },
   webView: { flex: 1 },
+  translationView: { flex: 1 },
+  translationContent: { padding: 16, paddingBottom: 32 },
+  translatedText: { fontSize: 17, lineHeight: 28, fontWeight: '600' },
   errorTitle: { fontSize: 18, fontWeight: '800', marginBottom: 14 },
   backButton: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10 },
   backButtonText: { fontSize: 14, fontWeight: '800' },

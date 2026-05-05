@@ -1,4 +1,5 @@
 import { Article } from '@/models/Article';
+import { NewsCategoryFilter } from '@/models/NewsCategory';
 import { ArticleFilter } from '@/models/NewsSource';
 import { MarketBrief } from '@/models/MarketBrief';
 import { makeDefaultArticleService } from '@/services/defaultArticleService';
@@ -35,6 +36,7 @@ export function FeedScreen() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [favorites, setFavorites] = useState<Article[]>([]);
   const [filter, setFilter] = useState<ArticleFilter>('All');
+  const [categoryFilter, setCategoryFilter] = useState<NewsCategoryFilter>('All');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,11 +53,14 @@ export function FeedScreen() {
     if (filter !== 'All') {
       result = result.filter(article => article.source === filter);
     }
+    if (categoryFilter !== 'All') {
+      result = result.filter(article => article.category === categoryFilter);
+    }
     if (searchText) {
       result = result.filter(article => article.title.toLowerCase().includes(searchText.toLowerCase()));
     }
     return result;
-  }, [articles, filter, searchText]);
+  }, [articles, categoryFilter, filter, searchText]);
 
   const favoriteIds = useMemo(() => new Set(favorites.map(article => article.id)), [favorites]);
 
@@ -91,7 +96,7 @@ export function FeedScreen() {
       Speech.stop();
       setReadingFeed(false);
     }
-  }, [filter, searchText]);
+  }, [categoryFilter, filter, searchText]);
 
   async function toggleAlerts(enabled: boolean) {
     const permitted = enabled ? await ensureNotificationPermission() : true;
@@ -136,7 +141,7 @@ export function FeedScreen() {
 
     await Speech.stop();
     setReadingFeed(true);
-    Speech.speak(createFeedSpeechText(headlines, filter), {
+    Speech.speak(createFeedSpeechText(headlines, filter, categoryFilter), {
       language: getFeedSpeechLanguage(headlines),
       pitch: 1,
       rate: 0.72,
@@ -216,6 +221,7 @@ export function FeedScreen() {
 
         <View style={styles.metaRow}>
           <Text style={[styles.metaText, { color: dark ? '#8F98A8' : '#667085' }]}>Source: {filter}</Text>
+          <Text style={[styles.metaText, { color: dark ? '#8F98A8' : '#667085' }]}>Category: {categoryFilter}</Text>
           <Text style={[styles.metaText, { color: dark ? '#8F98A8' : '#667085' }]}>{favorites.length} saved</Text>
         </View>
 
@@ -250,6 +256,7 @@ export function FeedScreen() {
         </View>
       </View>
 
+      <FilterBar selected={categoryFilter} onSelect={setCategoryFilter} variant="category" />
       <FilterBar selected={filter} onSelect={setFilter} />
       {error ? <Text style={styles.inlineError}>Some sources failed: {error}</Text> : null}
       <FlatList
@@ -311,10 +318,11 @@ const styles = StyleSheet.create({
   inlineError: { color: '#D92D20', paddingHorizontal: 16, marginBottom: 8, fontSize: 13, fontWeight: '700' }
 });
 
-function createFeedSpeechText(articles: Article[], filter: ArticleFilter): string {
+function createFeedSpeechText(articles: Article[], filter: ArticleFilter, categoryFilter: NewsCategoryFilter): string {
   const sourceIntro = filter === 'All' ? 'all news feeds' : `${filter} news`;
+  const categoryIntro = categoryFilter === 'All' ? '' : ` in ${categoryFilter}`;
   const headlines = articles.map((article, index) => `${index + 1}. ${article.title}`).join('. ');
-  return `MarketPulse headlines from ${sourceIntro}. ${headlines}`;
+  return `MarketPulse headlines from ${sourceIntro}${categoryIntro}. ${headlines}`;
 }
 
 function getFeedSpeechLanguage(articles: Article[]): string {

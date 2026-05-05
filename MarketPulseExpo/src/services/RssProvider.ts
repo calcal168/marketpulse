@@ -2,6 +2,8 @@ import { XMLParser } from 'fast-xml-parser';
 import { Article } from '@/models/Article';
 import { ArticleProvider } from './ArticleProvider';
 import { NewsSource } from '@/models/NewsSource';
+import { NewsCategory } from '@/models/NewsCategory';
+import { categorizeArticle } from './categorizeArticle';
 import { stripHtml } from './html';
 
 const parser = new XMLParser({ ignoreAttributes: false });
@@ -30,7 +32,7 @@ function asArray<T>(value: T | T[] | undefined): T[] {
 }
 
 export class RssProvider implements ArticleProvider {
-  constructor(private source: NewsSource, private url: string) {}
+  constructor(private source: NewsSource, private url: string, private category?: NewsCategory) {}
 
   async fetchArticles(): Promise<Article[]> {
     const response = await fetch(this.url);
@@ -68,13 +70,19 @@ export class RssProvider implements ArticleProvider {
 
         if (!link || !title) return undefined;
 
-        return {
+        const article = {
           id: `${this.source}-${link}`,
           source: this.source,
+          category: this.category ?? 'Financial',
           title,
           summary: item.description ? stripHtml(item.description) : undefined,
           publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : undefined,
           url: link,
+        };
+
+        return {
+          ...article,
+          category: this.category ?? categorizeArticle(article),
         };
       })
       .filter(Boolean) as Article[];
