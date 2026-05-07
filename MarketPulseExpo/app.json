@@ -14,7 +14,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.example.marketpulseexpo",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoadsInWebContent": true
+        }
       },
       "runtimeVersion": {
         "policy": "appVersion"

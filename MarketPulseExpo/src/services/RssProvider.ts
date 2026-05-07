@@ -7,6 +7,8 @@ import { categorizeArticle } from './categorizeArticle';
 import { stripHtml } from './html';
 
 const parser = new XMLParser({ ignoreAttributes: false });
+const MAX_RSS_XML_CHARS = 220000;
+const MAX_RSS_ITEMS = 30;
 
 interface RssItem {
   title?: string;
@@ -32,59 +34,68 @@ function asArray<T>(value: T | T[] | undefined): T[] {
 }
 
 export class RssProvider implements ArticleProvider {
-  constructor(private source: NewsSource, private url: string, private category?: NewsCategory) {}
+  constructor(private source: NewsSource, private url: string, private category?: NewsCategory, private timeoutMs?: number) {}
 
   async fetchArticles(): Promise<Article[]> {
-    const response = await fetch(this.url);
+    const controller = this.timeoutMs ? new AbortController() : undefined;
+    const timeoutId = controller && this.timeoutMs
+      ? setTimeout(() => controller.abort(), this.timeoutMs)
+      : undefined;
 
-    if (!response.ok) {
-      throw new Error(`${this.source} feed failed: ${response.status}`);
-    }
-
-    const xml = await response.text();
-
-    let parsed: RssFeed;
     try {
-      parsed = parser.parse(xml);
-    } catch (error) {
-      throw new Error(`Failed to parse RSS XML for ${this.source}: ${(error as Error).message}`);
-    }
+      const response = await fetch(this.url, controller ? { signal: controller.signal } : undefined);
 
-    const items = asArray(parsed?.rss?.channel?.item);
+      if (!response.ok) {
+        throw new Error(`${this.source} feed failed: ${response.status}`);
+      }
 
-    return items
-      .map((item): Article | undefined => {
-        const rawLink = item.link
-          ? typeof item.link === 'string' ? item.link : item.link['#text']
-          : item.guid
-            ? typeof item.guid === 'string' ? item.guid : item.guid['#text']
+      const xml = (await response.text()).slice(0, MAX_RSS_XML_CHARS);
+
+      let parsed: RssFeed;
+      try {
+        parsed = parser.parse(xml);
+      } catch (error) {
+        throw new Error(`Failed to parse RSS XML for ${this.source}: ${(error as Error).message}`);
+      }
+
+      const items = asArray(parsed?.rss?.channel?.item).slice(0, MAX_RSS_ITEMS);
+
+      return items
+        .map((item): Article | undefined => {
+          const rawLink = item.link
+            ? typeof item.link === 'string' ? item.link : item.link['#text']
+            : item.guid
+              ? typeof item.guid === 'string' ? item.guid : item.guid['#text']
+              : undefined;
+
+          const link = typeof rawLink === 'string' &&
+            rawLink.startsWith('http') &&
+            !rawLink.includes('localhost')
+            ? rawLink
             : undefined;
 
-        const link = typeof rawLink === 'string' &&
-          rawLink.startsWith('http') &&
-          !rawLink.includes('localhost')
-          ? rawLink
-          : undefined;
+          const title = item.title ? stripHtml(item.title) : undefined;
 
-        const title = item.title ? stripHtml(item.title) : undefined;
+          if (!link || !title) return undefined;
 
-        if (!link || !title) return undefined;
+          const article = {
+            id: `${this.source}-${link}`,
+            source: this.source,
+            category: this.category ?? 'Financial',
+            title,
+            summary: item.description ? stripHtml(item.description) : undefined,
+            publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : undefined,
+            url: link,
+          };
 
-        const article = {
-          id: `${this.source}-${link}`,
-          source: this.source,
-          category: this.category ?? 'Financial',
-          title,
-          summary: item.description ? stripHtml(item.description) : undefined,
-          publishedAt: item.pubDate ? new Date(item.pubDate).toISOString() : undefined,
-          url: link,
-        };
-
-        return {
-          ...article,
-          category: this.category ?? categorizeArticle(article),
-        };
-      })
-      .filter(Boolean) as Article[];
+          return {
+            ...article,
+            category: this.category ?? categorizeArticle(article),
+          };
+        })
+        .filter(Boolean) as Article[];
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
   }
 }
